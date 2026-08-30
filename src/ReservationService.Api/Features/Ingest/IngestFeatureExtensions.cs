@@ -11,8 +11,8 @@ public static class IngestFeatureExtensions
 
     public static WebApplication MapIngestEndpoint(this WebApplication app)
     {
-        app.MapPost("/api/reservations/ingest", (HttpContext httpContext, IIngestService ingestService) =>
-            ingestService.IngestAsync(httpContext.Request.Body, httpContext.RequestAborted));
+        app.MapPost("/api/reservations/ingest", (IngestRequestBody body, IIngestService ingestService, CancellationToken cancellationToken) =>
+            ingestService.IngestAsync(body, cancellationToken));
 
         return app;
     }

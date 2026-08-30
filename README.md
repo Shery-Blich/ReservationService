@@ -23,7 +23,5 @@ See `plan.md` for the full architecture/implementation plan.
 
 ## What I'd do differently with more time
 
-- Swap SQLite for a database engine with real row-level locking (Postgres/SQL Server) to remove the global single-writer bottleneck and properly support multi-*machine* deployment. Note this system as built has no CAP tradeoff to make (one SQLite file, no data replication) — but if the data store itself were ever genuinely replicated across machines, I'd lean CP over AP: both dedup and rate-limiting are consistency-dependent guarantees, so losing consistency during a partition would let a spamming supplier through, defeating the point of the service. Losing availability temporarily is the safer cost, since suppliers already retry on failure.
-- Actually solve cross-supplier/cross-reservationId reconciliation instead of treating it as out of scope — likely via a content-derived (hashed) key across candidate matches, though this needs real supplier behavior data to do safely without merging genuinely different bookings.
-- Revisit a message queue once the database supports genuine concurrent writes — at that point it could be a reasonable way to manage per-supplier ordering/backpressure at higher scale, even though it wasn't justified here.
-- Add observability (throttle-rejection rates, dedup rates, per-supplier request patterns) to catch a misbehaving supplier proactively rather than only reactively via the stats endpoint.
+- Reduce files bloation made by the AI. The code is written cleanly, works, but a bit bloated in files.
+- Made Rate Limiter configurable instead of hard coded

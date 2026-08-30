@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics;
 using ReservationService.Api.Data;
 using ReservationService.Api.Data.Repositories;
 using ReservationService.Api.Features.Ingest;
@@ -19,7 +20,12 @@ builder.Services.AddStatsFeature();
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    StatusCodeSelector = exception => exception is BadHttpRequestException badHttpRequestException
+        ? badHttpRequestException.StatusCode
+        : StatusCodes.Status500InternalServerError
+});
 app.UseStatusCodePages();
 
 using (var startupScope = app.Services.CreateScope())

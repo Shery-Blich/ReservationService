@@ -63,7 +63,7 @@ public sealed class ThrottleRepository : IThrottleRepository
         return count ?? 0;
     }
 
-    private static Task PruneOldBucketsAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, long previousBucketId, CancellationToken cancellationToken)
+    private static Task<int> PruneOldBucketsAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, long previousBucketId, CancellationToken cancellationToken)
     {
         var parameters = new { SupplierId = supplierId, PreviousBucketId = previousBucketId };
         var command = new CommandDefinition(PruneOldBucketsSql, parameters, transaction, cancellationToken: cancellationToken);

@@ -13,13 +13,13 @@ internal static class SupplierStatsWriter
             ThrottledCount = ThrottledCount + @ThrottledDelta;
         """;
 
-    public static Task IncrementIngestedAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, CancellationToken cancellationToken = default)
+    public static Task<int> IncrementIngestedAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, CancellationToken cancellationToken = default)
         => IncrementAsync(connection, transaction, supplierId, ingestedDelta: 1, throttledDelta: 0, cancellationToken);
 
-    public static Task IncrementThrottledAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, CancellationToken cancellationToken = default)
+    public static Task<int> IncrementThrottledAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, CancellationToken cancellationToken = default)
         => IncrementAsync(connection, transaction, supplierId, ingestedDelta: 0, throttledDelta: 1, cancellationToken);
 
-    private static Task IncrementAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, int ingestedDelta, int throttledDelta, CancellationToken cancellationToken)
+    private static Task<int> IncrementAsync(IDbConnection connection, IDbTransaction transaction, string supplierId, int ingestedDelta, int throttledDelta, CancellationToken cancellationToken)
     {
         var parameters = new
         {

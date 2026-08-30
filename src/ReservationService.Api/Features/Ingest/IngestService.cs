@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using ReservationService.Api.Data;
 using ReservationService.Api.Data.Models;
@@ -9,14 +8,9 @@ namespace ReservationService.Api.Features.Ingest;
 
 public sealed partial class IngestService : IIngestService
 {
-    private const double ThrottleThreshold = 100.0;
+    private const int ThrottleThreshold = 100;
 
     private const long BucketSizeSeconds = 60;
-
-    private static readonly JsonSerializerOptions RequestBodyJsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     private readonly IThrottleRepository throttleRepository;
 
@@ -42,20 +36,8 @@ public sealed partial class IngestService : IIngestService
         this.timeProvider = timeProvider;
     }
 
-    public async Task<IResult> IngestAsync(Stream requestBody, CancellationToken cancellationToken)
+    public async Task<IResult> IngestAsync(IngestRequestBody body, CancellationToken cancellationToken)
     {
-        IngestRequestBody body;
-
-        try
-        {
-            body = await JsonSerializer.DeserializeAsync<IngestRequestBody>(requestBody, RequestBodyJsonOptions, cancellationToken)
-                ?? new IngestRequestBody();
-        }
-        catch (JsonException)
-        {
-            return BuildSingleFieldValidationProblem("body", "The request body must be valid JSON.");
-        }
-
         if (!TryNormalizeSupplierId(body.SupplierId, out var supplierId))
         {
             return BuildSingleFieldValidationProblem("supplierId", "supplierId is required and must be a non-blank string.");
@@ -178,6 +160,7 @@ public sealed partial class IngestService : IIngestService
         }
 
         fields = new ParsedReservationFields(reservationId!, roomId!, checkIn!.Value, checkOut!.Value, price!.Value, updatedAtUtc!.Value);
+        
         return true;
     }
 

@@ -1,6 +1,6 @@
 namespace ReservationService.Api.Features.Ingest;
 
-internal sealed record IngestRequestBody
+public sealed record IngestRequestBody
 {
     public string? SupplierId { get; init; }
 
