@@ -24,7 +24,7 @@ public sealed class ThrottleWindowTests : IClassFixture<ReservationApiFactory>
         for (var i = 0; i < 100; i++)
         {
             var response = await client.PostIngestAsync(IngestRequestFactory.CreateDefault(supplierId, TestIdentifiers.GuidLike()));
-            Assert.True(response.StatusCode is HttpStatusCode.Created or HttpStatusCode.OK);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         }
 
         var oneHundredFirstResponse = await client.PostIngestAsync(IngestRequestFactory.CreateDefault(supplierId, TestIdentifiers.GuidLike()));
