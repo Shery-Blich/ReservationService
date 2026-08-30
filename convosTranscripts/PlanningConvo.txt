@@ -1,0 +1,13 @@
+ ▐▛███▛█   Claude Code v2.1.251
+▝▜██████▀  Opus 5 (1M context) · API Usage Billing
+  ▝▝ ▝▝    ~\Github\ReservationService\convosTranscripts
+
+
+> /resume                                                                       
+  ⎿  This conversation is from a different directory.
+
+     To resume, run:
+       cd 'C:\Users\Shery\Github\ReservationService' ; claude --resume
+     b803c1a9-e767-4187-8a2f-560453ff98e5
+
+     (Command copied to clipboard)

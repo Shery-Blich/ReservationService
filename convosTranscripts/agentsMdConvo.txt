@@ -1,0 +1,122 @@
+ ▐▛███▛█   Claude Code v2.1.251
+▝▜██████▀  Sonnet 5 · API Usage Billing
+  ▝▝ ▝▝    ~\Github\ReservationService
+                                                                   
+
+> hey i want us to write the agent.md which will cover coding standards for     
+  this repo, take the conding standards as written in the unity rules, but fit  
+  them for c# 11+ as unity forces your into older versions, but thing that stay 
+  the same as pascal cases, spacing, using vars on left side should stay the    
+  same, if you dont have access to the unity skill let me know                  
+
+● I have access to the unity skill. Let me pull up its coding standards first so
+  I can see exactly what to adapt.
+
+● Skill(unity)
+  ⎿  Successfully loaded skill
+
+  Searched for 4 patterns, read 3 files (ctrl+o to expand)
+
+● Good — this repo is a plain ASP.NET Core Web API on .NET 10
+  (ReservationService.csproj), not Unity, so several Unity-specific sections
+  (MonoBehaviour lifecycle, DOTween, Input System, VContainer, UniTask,
+  [SerializeField]/[Header]) don't map directly. Before I draft agent.md, a few
+  calls need your input:
+  ⎿  Invalid tool parameters
+
+● User answered Claude's questions:
+  ⎿  · What filename/location for the standards doc? → AGENTS.md at repo root
+     · Unity's DI section uses VContainer and a MonoBehaviour Construct() 
+     pattern. This is an ASP.NET Core app with built-in DI. How should the DI 
+     section translate? → Built-in ASP.NET Core DI (Recommended)
+     · Unity's async section mandates UniTask over Task/Coroutines. On ASP.NET 
+     Core there's no UniTask - standard Task-based async/await is the platform 
+     norm. OK to replace that section with standard Task/async-await + 
+     CancellationToken (from HttpContext.RequestAborted) instead of dropping 
+     async guidance entirely? → Drop the async section entirely
+     · Unity's constants rule is UPPER_SNAKE_CASE (e.g. MAX_MIX_COUNT). Standard
+     .NET convention is PascalCase for const fields. You said 
+     naming/pascal-case conventions should carry over - does that include 
+     constants switching to PascalCase, or keep UPPER_SNAKE_CASE as Unity had 
+     it? → PascalCase (.NET convention)
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Here's the outline I'll turn into AGENTS.md, before I write it:
+
+  1. Naming Conventions — PascalCase methods/properties, camelCase private/local
+     fields, PascalCase constants, I-prefixed interfaces
+  2. Field Declaration & Encapsulation — auto-properties, { get; private set; },
+     avoid public fields (replaces Unity's [SerializeField]/[Header] section,
+     which has no web equivalent)
+  3. Code Style — var & Spacing — same as Unity: var preferred when the type is
+     obvious, Allman braces, always-braced if, blank-line rules, no trailing
+     whitespace
+  4. Project Structure — thin minimal-API endpoint handlers that delegate to
+     injected services, rather than logic inline in Program.cs (replaces
+     MonoBehaviour lifecycle rules)
+  5. SOLID & DRY — carried over unchanged, it's platform-agnostic
+  6. Dependency Injection — built-in ASP.NET Core DI: constructor injection,
+     register in Program.cs, bind to interfaces
+  7. Modern C# Language Features (C# 11+) — required members, raw string
+     literals, list patterns, generic math, file-scoped namespaces, primary
+     constructors, collection expressions — prefer these over older equivalents
+  8. Self-Documenting Code — extract non-trivial logic into descriptively named
+     private helpers
+  9. Documentation Integrity — preserve existing comments/TODOs, add XML
+     <summary> on new public members
+
+  Dropped entirely (no server-side equivalent, per your answers): async/UniTask
+  guidance, DOTween/tweening, Input System, MonoBehaviour lifecycle, GC/hot-path
+  Update() performance rules.
+
+● User answered Claude's questions:
+  ⎿  · Does this outline look right to write up as AGENTS.md, or do you want 
+     changes first? → I want to adjust something first
+
+● What would you like to change in the outline?
+
+✻ Worked for 1m 53s · done 4:04 PM
+
+> do not add comments and todos or xml summaries                                
+  if some descions are made that requrie comments to explain them, the agent    
+  should talk with me first and no continue on it's own                         
+
+● Got it — updating section 9:
+
+  9. Comments Policy (replaces "Documentation Integrity")
+  - Do not add comments, TODOs, or XML <summary> blocks when writing or editing
+    code.
+  - If a design decision seems to genuinely need an explanatory comment (a
+    non-obvious constraint, a workaround, a subtle invariant), the agent must
+    stop and discuss it with the user first — never add the comment and keep
+    going unilaterally.
+
+● User answered Claude's questions:
+  ⎿  · With section 9 updated as above, ready to write AGENTS.md? → Yes, write 
+     it now
+
+● Write(AGENTS.md)
+  ⎿  Wrote 163 lines to AGENTS.md
+       1 # Coding Standards — ReservationService
+       2 
+         re Web API (net10.0, `Nullable` and `ImplicitUsings` enabled). T
+         hese standards assume C# 11+ language features are available — U
+         nity-era version constraints do not apply here.
+       5 ---
+       6 
+       7 ## 1. Naming Conventions
+       9 | Element | Convention | Example |
+      10 |---|---|---|
+     … +199 lines (ctrl+o to expand)
+
+● Created AGENTS.md at the repo root with the 9 aligned sections: naming, field
+  encapsulation, var/spacing style, project structure (thin endpoints delegating
+  to services), SOLID/DRY, built-in ASP.NET Core DI, modern C# 11+ features,
+  self-documenting code, and the comments policy (no comments/TODOs/XML
+  summaries, and stop to discuss with you before adding one).
+
+✻ Sautéed for 40s · done 4:06 PM
+※ recap: We drafted AGENTS.md coding standards for the ReservationService repo, adapting Unity's style rules for this ASP.NET Core/C#11+ project, and it's now written to the repo root. Next: review the file and confirm it matches your expectations. (disable recaps in /config)
+
+> /review                                                                       
