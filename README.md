@@ -1,27 +1,30 @@
 # ReservationService
 
-Supplier feed throttle & dedup service — ASP.NET Core Web API (.NET 8+), Dapper, SQLite.
+Supplier feed throttle & deduplication service built with ASP.NET Core (.NET 10), Dapper, and SQLite.
 
-See `plan.md` for the full architecture/implementation plan.
+---
 
-## Assumptions made where the spec was unclear
+## 1. Assumptions
 
-- **Reservation identity is `(supplierId, reservationId)`**, treated as a genuine 1:1 relationship with a real booking. Two different reservationIds are always treated as two different reservations — no attempt is made to reconcile a supplier issuing multiple reservationIds for what might be the same real-world booking. If that 1:1 assumption didn't hold, the right fix would be a content-derived approach (e.g. a hash/synthetic key built from the booking's business fields) to reconcile matching bookings across different reservationIds — but that's a harder, more speculative problem than this exercise asks for, and isn't something we could validate without real supplier behavior data, so it's scoped out here.
-- **Duplicate detection compares business fields only** (`roomId`, `checkIn`, `checkOut`, `price`); `updatedAtUtc` is excluded from that comparison (treated as resend bookkeeping, not booking data) but is used separately to detect and ignore stale/out-of-order updates (an incoming update whose `updatedAtUtc` is older than what's stored is ignored rather than applied).
-- **"Ingested" (stats endpoint) counts every well-formed, legitimately processed request** — created, updated, duplicate, and stale-ignored all count here, since each is a genuine reservation update from the supplier's feed even when it results in no write. **"Throttled" counts only actual rate-limit rejections (429)**, nothing broader. Invalid (400) requests are tracked internally (a separate `InvalidCount`) but are never returned by the stats endpoint. Stats are lifetime cumulative totals, since the endpoint takes no time-range parameter. An unknown/never-seen supplierId returns `404` — but a supplier who's only ever sent invalid requests still returns `200` with zero ingested/throttled counts, since `InvalidCount` alone is enough to make that supplier "known."
-- **`price` is assumed to have at most 2 decimal places** and is rounded to 2 decimal places on ingest. Real booking systems are more complex than this: different currencies have different precision (most use 2 decimal places, some like JPY use 0, a few like Bahraini Dinar use 3), and converting/displaying prices across currencies is a real problem real platforms solve with live exchange rates. The ingest payload here has no currency field at all, so there's no way to know what precision a given price actually needs — 2 decimal places was chosen as the simplest assumption consistent with the spec's own example (`450.00`).
-- **Scope is multiple local processes sharing one SQLite database** (tested with 3 concurrent instances), not genuine multi-machine deployment — SQLite/LocalDB aren't designed for reliable multi-machine concurrent access regardless of instance count. The throttle counter is DB-backed for exactly this reason: a supplier splitting requests across all 3 instances still hits the same shared 60s counter, so the 100-request limit is enforced on combined traffic, not per instance.
+- **Identity & Dedup**: A reservation is uniquely identified by the composite key `(supplierId, reservationId)`. Deduplication compares business fields (`roomId`, `checkIn`, `checkOut`, `price`). Updates with an older `updatedAtUtc` than stored are ignored as stale.
+- **Stats Semantics**: `Ingested` counts all validly processed feed updates (created, updated, duplicate, stale-ignored). `Throttled` counts 429 rate-limit rejections. An unknown supplier returns `404 Not Found`.
+- **Price Precision**: Prices are rounded to 2 decimal places to match the spec example(ignoring real world currency variations).
+- **Multi-Instance Concurrency**: Designed for multiple local API processes sharing a single SQLite database in WAL mode. Rate limiting is DB-backed so traffic split across instances consumes a shared 60s quota.
 
-## Where I changed direction from what Claude Code suggested (and vice versa)
+---
 
-- I initially wanted a message queue (per-supplier topics) so different suppliers' updates couldn't block each other. Claude pointed out this wouldn't actually help: SQLite serializes **all** writes globally regardless of which rows they touch — even in WAL mode, only one writer is allowed on the whole database file at a time. A queue would add an indirection layer without removing that bottleneck; the only real fix is a different database engine, which is outside this exercise's given constraints. I dropped the queue and documented the SQLite write-serialization behavior as an accepted, low-risk tradeoff at this exercise's scale.
-- I raised hashing a reservation's business fields as a dedup mechanism, partly to handle a supplier issuing multiple reservationIds for what might be the same real booking. Claude helped me realize the scope: Settling on treating `(supplierId, reservationId)` as a genuine 1:1 identity for this exercise, which removes the problem hashing was meant to solve. Direct field comparison is what's implemented, for that scoping reason.
-- Claude recommended an exact sliding-window log (one row per request) for precision. I disagreed and went with the less-precise sliding-window-counter approximation instead, to keep storage bounded per supplier, accepting the documented boundary-precision tradeoff that comes with it.
-- Claude's first suggestion for an unknown/never-seen supplierId on the stats endpoint was `200` with zero counts, reasoning there's no supplier "registration" concept to check against. I disagreed: we already track per-supplier counts in a `SupplierStats` table (`supplierId`, `ingested`, `throttled`) that only gets a row once something has actually happened for that supplier, so "no row" is a real, checkable fact, not a guess — `404` is the conventional REST signal that the resource doesn't exist, which fits better than a zero-filled body.
-- My default is a fully custom error response shape for control. Claude flagged that a custom shape only covers errors our own code produces — framework-level failures (bad JSON, wrong content-type) still fall back to ASP.NET Core's default shape unless every such path is deliberately intercepted too, risking two inconsistent error shapes in the same API. We settled on the built-in ProblemDetails shape everywhere, extended via its `extensions` field for anything domain-specific.
-- Claude recommended storing `checkIn`/`checkOut`/`updatedAtUtc` as `DateTime.Ticks` (100ns precision) — a lossless format matching the precision already preserved by today's string-based storage, with zero regression risk. I went with Unix milliseconds instead: a more universally recognized convention, consistent with `ThrottleWindowCounters`'s existing epoch-seconds `BucketId`, and readable/convertible by any tool (including SQLite's own `datetime()`/`strftime()`) without needing to know a .NET-specific epoch. This assumes sub-millisecond precision is not meaningful for a reservation timestamp for this project and I prioritized debugging ease instead, on a real project DateTime.ticks may be the better choice for accuracy
+## 2. Key Decisions & AI Collaboration
 
-## What I'd do differently with more time
+- **Message Queues vs. SQLite**: I initially considered per-supplier message queues. Claude pointed out that SQLite serializes all writes globally, so a queue adds indirection without removing the database bottleneck. I dropped the queue and accepted SQLite write-serialization for this scale.
+- **Sliding-Window Counter vs. Log**: Claude proposed an exact request log (storing 1 row per request). I pushed back and implemented a sliding-window counter approximation to keep storage bounded per supplier.
+- **Stats 404 vs. 200**: Claude initially suggested returning `200 OK` with zero stats for unknown suppliers. I overrode this in favor of `404 Not Found` to adhere to standard REST semantics.
+- **Storage Format**: Claude suggested `DateTime.Ticks` (lossless .NET precision). I opted for Unix epoch milliseconds for standard SQL compatibility and tool readability.
 
-- Reduce files bloation made by the AI. The code is written cleanly, works, but a bit bloated in files.
-- Made Rate Limiter configurable instead of hard coded
+---
+
+## 3. What I'd Do Differently With More Time
+
+- **Production Database for True Concurrency**: Swap SQLite for a database engine supporting row-level locking (e.g. PostgreSQL or SQL Server) to eliminate SQLite's global single writer lock and enable genuine multi-node horizontal scaling.
+- **Configurable Rate Limits**: Move hardcoded constants (100 req / 60s) into configuration and environment variables
+- **Reduce files bloat**: Consolidate single line DTO records into their respective feature files to reduce file sprawl.
+- **Observability**: Add OpenTelemetry metrics and tracing to monitor throttle rejection rates and per-supplier traffic patterns in production (scoped out for this exercise).
