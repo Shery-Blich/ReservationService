@@ -1,0 +1,148 @@
+ ▐▛███▛█   Claude Code v2.1.251
+▝▜██████▀  Sonnet 5 · API Usage Billing
+  ▝▝ ▝▝    ~\Github\ReservationService
+
+
+> i want to manually test that the project is indeed done, tell me how          
+
+● I'll look at the project structure and recent endpoints to give you concrete
+  manual testing steps.
+
+  Searched for 4 patterns, read 6 files, ran 1 shell command (ctrl+o to expand)
+
+● Here's a manual test plan based on the spec in plan.md and the actual
+  endpoints (POST /api/reservations/ingest, GET 
+  /api/reservations/stats/{supplierId}).
+
+  0. Baseline: run the automated suite first
+
+  dotnet test
+  This should pass before you bother testing by hand — no point manually
+  re-deriving what IngestOutcomeTests, ThrottleWindowTests, ConcurrencyTests,
+  etc. already assert.
+
+  1. Start the app
+
+  dotnet run --project src/ReservationService.Api
+  Note the port it binds to (check console output, e.g. http://localhost:5xxx).
+  It creates reservationservice.db in the working directory on first run (WAL
+  mode).
+
+  2. Core ingest flows (use curl or Postman)
+
+  Create — new reservation:
+  curl -i -X POST http://localhost:5xxx/api/reservations/ingest \
+    -H "Content-Type: application/json" \
+    -d '{"supplierId":"acme-1","reservationId":"r1","roomId":"room-1","checkIn":
+  "2026-01-10T00:00:00Z","checkOut":"2026-01-12T00:00:00Z","price":100.005,"upda
+  tedAtUtc":"2026-01-01T00:00:00Z"}'
+  Expect 201, {"status":"created",...}, and price rounded to 100.01 if you check
+  stored data.
+
+  Exact resend (same body) → expect 200 duplicate, no state change.
+
+  Update — same ids, changed price/roomId, updatedAtUtc equal or newer → expect
+  200 updated.
+
+  Stale — same ids, changed fields, but updatedAtUtc older than what's stored →
+  expect 200 stale_ignored.
+
+  Invalid — omit roomId, or checkIn >= checkOut, or negative price → expect 400
+  ValidationProblemDetails.
+
+  Missing/blank supplierId → expect 400, and confirm via stats that neither
+  throttle nor invalid count moved (see below).
+
+  Non-Z offset — "checkIn":"2026-01-10T05:30:00+05:30" → should succeed and
+  normalize to the same UTC instant as the Z equivalent.
+
+  Casing/whitespace identity — ingest as "acme-1", then again as " ACME-1 " for
+  the same reservationId → should dedupe as the same identity.
+
+  3. Stats endpoint
+
+  curl -i http://localhost:5xxx/api/reservations/stats/ACME-1
+  - Unknown supplier → 404.
+  - Blank route param (.../stats/%20 or trailing slash) → 400.
+  - After the flows above, ingested should reflect
+    created+updated+duplicate+stale_ignored counts; throttled only real 429s; no
+    invalid field ever appears.
+
+  4. Throttle (100/window)
+
+  Fire 101 requests for one supplierId in quick succession (a small loop):
+  for i in $(seq 1 101); do
+    curl -s -o /dev/null -w "%{http_code}\n" -X POST
+  http://localhost:5xxx/api/reservations/ingest \
+      -H "Content-Type: application/json" \
+      -d "{\"supplierId\":\"throttle-test\",\"reservationId\":\"r$i\",\"roomId\"
+  :\"room-1\",\"checkIn\":\"2026-01-10T00:00:00Z\",\"checkOut\":\"2026-01-12T00:
+  00:00Z\",\"price\":10,\"updatedAtUtc\":\"2026-01-01T00:00:00Z\"}"
+  done
+  Expect the 101st to return 429; check stats afterward for throttled: 1.
+
+  5. Error handling
+
+  - Hit an unmapped route, e.g. curl -i http://localhost:5xxx/nope → should
+    return ProblemDetails JSON with 404, not an empty body (this is the
+    UseStatusCodePages requirement).
+  - Send malformed JSON body → 400 ProblemDetails.
+
+  6. Multi-instance concurrency (optional, harder to do manually)
+
+  Since ports/DB path are config-driven, you can spin up 3 instances against the
+  same DB file:
+  $env:ConnectionStrings__ReservationDb="Data Source=shared.db"; dotnet run
+  --project src/ReservationService.Api --urls http://localhost:5001
+  $env:ConnectionStrings__ReservationDb="Data Source=shared.db"; dotnet run
+  --project src/ReservationService.Api --urls http://localhost:5002
+  $env:ConnectionStrings__ReservationDb="Data Source=shared.db"; dotnet run
+  --project src/ReservationService.Api --urls http://localhost:5003
+  Then fire the same (supplierId, reservationId) update concurrently at all
+  three ports and confirm only one final row exists with the newest updatedAtUtc
+  winning (inspect shared.db with the sqlite3 CLI or DB Browser for SQLite).
+  This scenario is really what ConcurrencyTests.cs already automates — manual
+  testing here is mostly for spot-checking, not full coverage.
+
+  Want me to also check the .db file contents for you after you run some of
+  these, or generate a ready-made script/Postman collection for steps 2–5?
+
+✻ Crunched for 48s · done 9:01 PM
+
+※ recap: You're verifying the ReservationService project is complete by manually testing its ingest and stats endpoints. I gave you curl-based test steps; next, run `dotnet run` and start working through the create/update/duplicate/throttle scenarios. (disable recaps in /config)
+
+> i am using postman                                                            
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● I'll build a Postman collection covering all those scenarios so you can just
+  import and click through.
+  ⎿  Interrupted · What should Claude do instead?
+
+> no need, just give me a dummy copy pastable valid request i can just put      
+  directly in postman                                                           
+
+● Here's a valid request you can paste straight into Postman:
+
+  Method: POST
+  URL: http://localhost:5202/api/reservations/ingest
+  Headers: Content-Type: application/json
+  Body → raw → JSON:
+  {
+    "supplierId": "acme-1",
+    "reservationId": "r1",
+    "roomId": "room-1",
+    "checkIn": "2026-01-10T00:00:00Z",
+    "checkOut": "2026-01-12T00:00:00Z",
+    "price": 100.005,
+    "updatedAtUtc": "2026-01-01T00:00:00Z"
+  }
+
+  Expect 201 Created with:
+  { "status": "created", "supplierId": "ACME-1", "reservationId": "R1" }
+
+  (Port 5202 is from launchSettings.json — adjust if dotnet run prints a
+  different one.) Send it again unchanged and you should get 200 duplicate
+  instead.
+
+✻ Baked for 5s · done 9:06 PM

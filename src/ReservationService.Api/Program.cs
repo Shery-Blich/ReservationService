@@ -12,6 +12,7 @@ builder.Services.AddSingleton<IDatabaseInitializer, DatabaseInitializer>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IThrottleRepository, ThrottleRepository>();
 builder.Services.AddScoped<ISupplierStatsRepository, SupplierStatsRepository>();
+builder.Services.AddSingleton<IThrottleLatch, ThrottleLatch>();
 
 builder.Services.AddIngestFeature();
 builder.Services.AddStatsFeature();
@@ -32,4 +33,3 @@ app.MapStatsEndpoint();
 
 app.Run();
 
-public partial class Program;

@@ -47,8 +47,8 @@ public sealed class NormalizationTests : IClassFixture<ReservationApiFactory>
 
         var zOffsetRow = await ReservationDbAssertions.FindReservationAsync(databasePath, supplierId.ToUpperInvariant(), zOffsetReservationId.ToUpperInvariant());
         var nonZOffsetRow = await ReservationDbAssertions.FindReservationAsync(databasePath, supplierId.ToUpperInvariant(), nonZOffsetReservationId.ToUpperInvariant());
-        var zInstant = DateTimeOffset.Parse(zOffsetRow!.CheckIn).UtcDateTime;
-        var nonZInstant = DateTimeOffset.Parse(nonZOffsetRow!.CheckIn).UtcDateTime;
+        var zInstant = DateTimeOffset.FromUnixTimeMilliseconds(zOffsetRow!.CheckIn).UtcDateTime;
+        var nonZInstant = DateTimeOffset.FromUnixTimeMilliseconds(nonZOffsetRow!.CheckIn).UtcDateTime;
         Assert.Equal(zInstant, nonZInstant);
     }
 
@@ -66,8 +66,8 @@ public sealed class NormalizationTests : IClassFixture<ReservationApiFactory>
 
         var zOffsetRow = await ReservationDbAssertions.FindReservationAsync(databasePath, supplierId.ToUpperInvariant(), zOffsetReservationId.ToUpperInvariant());
         var negativeOffsetRow = await ReservationDbAssertions.FindReservationAsync(databasePath, supplierId.ToUpperInvariant(), negativeOffsetReservationId.ToUpperInvariant());
-        var zInstant = DateTimeOffset.Parse(zOffsetRow!.UpdatedAtUtc).UtcDateTime;
-        var negativeInstant = DateTimeOffset.Parse(negativeOffsetRow!.UpdatedAtUtc).UtcDateTime;
+        var zInstant = DateTimeOffset.FromUnixTimeMilliseconds(zOffsetRow!.UpdatedAtUtc).UtcDateTime;
+        var negativeInstant = DateTimeOffset.FromUnixTimeMilliseconds(negativeOffsetRow!.UpdatedAtUtc).UtcDateTime;
         Assert.Equal(zInstant, negativeInstant);
     }
 

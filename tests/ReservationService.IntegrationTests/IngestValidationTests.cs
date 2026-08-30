@@ -15,7 +15,7 @@ public sealed class IngestValidationTests : IClassFixture<ReservationApiFactory>
     }
 
     [Fact]
-    public async Task MissingRoomId_Returns400AndIncrementsInvalidCount()
+    public async Task MissingRoomId_Returns400()
     {
         var supplierId = TestIdentifiers.GuidLike();
         var payload = $$"""
@@ -33,9 +33,6 @@ public sealed class IngestValidationTests : IClassFixture<ReservationApiFactory>
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("problem+json", response.Content.Headers.ContentType?.MediaType);
-        var stats = await ReservationDbAssertions.FindSupplierStatsAsync(databasePath, supplierId.ToUpperInvariant());
-        Assert.NotNull(stats);
-        Assert.Equal(1, stats!.InvalidCount);
     }
 
     [Fact]
@@ -174,9 +171,6 @@ public sealed class IngestValidationTests : IClassFixture<ReservationApiFactory>
         await client.PostRawIngestAsync(payload);
 
         var stats = await ReservationDbAssertions.FindSupplierStatsAsync(databasePath, supplierId.ToUpperInvariant());
-        Assert.NotNull(stats);
-        Assert.Equal(2, stats!.InvalidCount);
-        Assert.Equal(0, stats.IngestedCount);
-        Assert.Equal(0, stats.ThrottledCount);
+        Assert.Null(stats);
     }
 }

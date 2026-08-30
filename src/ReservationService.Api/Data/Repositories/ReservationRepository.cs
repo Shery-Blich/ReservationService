@@ -21,33 +21,21 @@ public sealed class ReservationRepository : IReservationRepository
         """;
 
     private const string DuplicateCheckSql = """
-        UPDATE Reservations
-        SET RoomId = RoomId
+        SELECT COUNT(1)
+        FROM Reservations
         WHERE SupplierId = @SupplierId AND ReservationId = @ReservationId
           AND RoomId = @RoomId AND CheckIn = @CheckIn AND CheckOut = @CheckOut AND Price = @Price;
         """;
 
-    private readonly ISqliteConnectionFactory connectionFactory;
-
-    public ReservationRepository(ISqliteConnectionFactory connectionFactory)
-    {
-        this.connectionFactory = connectionFactory;
-    }
-
-    public async Task<ReservationWriteResult> UpsertAsync(ReservationRecord reservation, CancellationToken cancellationToken = default)
+    public async Task<ReservationWriteResult> UpsertAsync(IDbConnection connection, IDbTransaction transaction, ReservationRecord reservation, CancellationToken cancellationToken = default)
     {
         var parameters = ToSqlParameters(reservation);
-
-        using var connection = connectionFactory.CreateOpenConnection();
-        using var transaction = connection.BeginTransaction();
 
         var outcome = await TryInsertAsync(connection, transaction, parameters, cancellationToken)
             ? ReservationWriteOutcome.Created
             : await ApplyConditionalUpdateAsync(connection, transaction, parameters, cancellationToken);
 
         await SupplierStatsWriter.IncrementIngestedAsync(connection, transaction, reservation.SupplierId, cancellationToken);
-
-        transaction.Commit();
 
         return new ReservationWriteResult(outcome);
     }
@@ -76,9 +64,9 @@ public sealed class ReservationRepository : IReservationRepository
     private static async Task<ReservationWriteOutcome> ClassifyNoOpAsync(IDbConnection connection, IDbTransaction transaction, ReservationSqlParameters parameters, CancellationToken cancellationToken)
     {
         var command = new CommandDefinition(DuplicateCheckSql, parameters, transaction, cancellationToken: cancellationToken);
-        var rowsAffected = await connection.ExecuteAsync(command);
+        var matchingRowCount = await connection.ExecuteScalarAsync<int>(command);
 
-        return rowsAffected == 1 ? ReservationWriteOutcome.Duplicate : ReservationWriteOutcome.StaleIgnored;
+        return matchingRowCount > 0 ? ReservationWriteOutcome.Duplicate : ReservationWriteOutcome.StaleIgnored;
     }
 
     private static ReservationSqlParameters ToSqlParameters(ReservationRecord reservation)
@@ -101,12 +89,12 @@ public sealed class ReservationRepository : IReservationRepository
 
         public required string RoomId { get; init; }
 
-        public required string CheckIn { get; init; }
+        public required long CheckIn { get; init; }
 
-        public required string CheckOut { get; init; }
+        public required long CheckOut { get; init; }
 
         public required string Price { get; init; }
 
-        public required string UpdatedAtUtc { get; init; }
+        public required long UpdatedAtUtc { get; init; }
     }
 }

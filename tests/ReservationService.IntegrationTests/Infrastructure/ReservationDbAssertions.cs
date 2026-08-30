@@ -28,7 +28,7 @@ public static class ReservationDbAssertions
         await using var connection = await OpenConnectionAsync(databasePath);
 
         return await connection.QuerySingleOrDefaultAsync<SupplierStatsRow>(
-            "SELECT SupplierId, IngestedCount, ThrottledCount, InvalidCount FROM SupplierStats WHERE SupplierId = @SupplierId",
+            "SELECT SupplierId, IngestedCount, ThrottledCount FROM SupplierStats WHERE SupplierId = @SupplierId",
             new { SupplierId = supplierId });
     }
 

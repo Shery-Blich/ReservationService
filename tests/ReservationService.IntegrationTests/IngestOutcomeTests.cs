@@ -54,7 +54,7 @@ public sealed class IngestOutcomeTests : IClassFixture<ReservationApiFactory>
         var row = await ReservationDbAssertions.FindReservationAsync(databasePath, supplierId.ToUpperInvariant(), reservationId.ToUpperInvariant());
         Assert.NotNull(row);
         var originalInstant = DateTimeOffset.Parse(original.UpdatedAtUtc).UtcDateTime;
-        var storedInstant = DateTimeOffset.Parse(row!.UpdatedAtUtc).UtcDateTime;
+        var storedInstant = DateTimeOffset.FromUnixTimeMilliseconds(row!.UpdatedAtUtc).UtcDateTime;
         Assert.Equal(originalInstant, storedInstant);
     }
 
@@ -76,7 +76,7 @@ public sealed class IngestOutcomeTests : IClassFixture<ReservationApiFactory>
         var row = await ReservationDbAssertions.FindReservationAsync(databasePath, supplierId.ToUpperInvariant(), reservationId.ToUpperInvariant());
         Assert.NotNull(row);
         Assert.Equal(250.50m, row!.Price, 2);
-        Assert.Equal(newerTimestamp.UtcDateTime, DateTimeOffset.Parse(row.UpdatedAtUtc).UtcDateTime);
+        Assert.Equal(newerTimestamp.UtcDateTime, DateTimeOffset.FromUnixTimeMilliseconds(row.UpdatedAtUtc).UtcDateTime);
     }
 
     [Fact]

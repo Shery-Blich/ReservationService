@@ -49,7 +49,7 @@ public sealed class MixedOutcomeReconciliationTests : IClassFixture<ReservationA
         }
 
         var fillResponses = new List<HttpResponseMessage>();
-        for (var i = 0; i < 92; i++)
+        for (var i = 0; i < 95; i++)
         {
             fillResponses.Add(await client.PostIngestAsync(IngestRequestFactory.CreateDefault(supplierId, TestIdentifiers.GuidLike())));
         }
@@ -66,9 +66,7 @@ public sealed class MixedOutcomeReconciliationTests : IClassFixture<ReservationA
         Assert.Equal(HttpStatusCode.TooManyRequests, overflowResponse.StatusCode);
         var statsResponse = await client.GetStatsAsync(supplierId);
         var stats = await statsResponse.Content.ReadFromJsonAsync<StatsResponse>(JsonOptions.Default);
-        Assert.Equal(97, stats!.Ingested);
+        Assert.Equal(100, stats!.Ingested);
         Assert.Equal(1, stats.Throttled);
-        var supplierStatsRow = await ReservationDbAssertions.FindSupplierStatsAsync(databasePath, supplierId.ToUpperInvariant());
-        Assert.Equal(3, supplierStatsRow!.InvalidCount);
     }
 }

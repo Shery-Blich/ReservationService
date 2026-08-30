@@ -36,7 +36,7 @@ public sealed class StatsEndpointTests : IClassFixture<ReservationApiFactory>
     }
 
     [Fact]
-    public async Task SupplierWithOnlyInvalidRequests_Returns200WithZeroCounts()
+    public async Task SupplierWithOnlyInvalidRequests_Returns404()
     {
         var supplierId = TestIdentifiers.GuidLike();
         var invalidPayload = $$"""
@@ -53,10 +53,9 @@ public sealed class StatsEndpointTests : IClassFixture<ReservationApiFactory>
 
         var response = await client.GetStatsAsync(supplierId);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var stats = await response.Content.ReadFromJsonAsync<StatsResponse>(JsonOptions.Default);
-        Assert.Equal(0, stats!.Ingested);
-        Assert.Equal(0, stats.Throttled);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>(JsonOptions.Default);
+        Assert.Equal(404, problem!.Status);
     }
 
     [Fact]

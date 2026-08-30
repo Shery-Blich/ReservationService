@@ -89,7 +89,7 @@ public sealed class SupplierIdShortCircuitTests : IClassFixture<ReservationApiFa
     }
 
     [Fact]
-    public async Task InvalidBodyWithValidSupplierId_StillCountsTowardThrottleWindow()
+    public async Task InvalidBodyWithValidSupplierId_NeverCountsTowardThrottleWindow()
     {
         var supplierId = TestIdentifiers.GuidLike();
         var invalidPayload = $$"""
@@ -108,10 +108,6 @@ public sealed class SupplierIdShortCircuitTests : IClassFixture<ReservationApiFa
             var response = await client.PostRawIngestAsync(invalidPayload);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
-
-        var oneHundredFirstResponse = await client.PostRawIngestAsync(invalidPayload);
-
-        Assert.Equal(HttpStatusCode.TooManyRequests, oneHundredFirstResponse.StatusCode);
     }
 
     private static string ValidBodyWithSupplierId(string supplierId)

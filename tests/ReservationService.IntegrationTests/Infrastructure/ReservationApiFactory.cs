@@ -38,7 +38,10 @@ public sealed class ReservationApiFactory : WebApplicationFactory<Program>
 
     private void DeleteDatabaseFiles()
     {
-        SqliteConnection.ClearAllPools();
+        using (var connection = new SqliteConnection($"Data Source={DatabasePath}"))
+        {
+            SqliteConnection.ClearPool(connection);
+        }
 
         foreach (var suffix in new[] { string.Empty, "-wal", "-shm", "-journal" })
         {

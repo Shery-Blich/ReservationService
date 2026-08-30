@@ -21,14 +21,9 @@ public sealed class ThrottleRepository : IThrottleRepository
         DELETE FROM ThrottleWindowCounters WHERE SupplierId = @SupplierId AND BucketId < @PreviousBucketId;
         """;
 
-    private readonly ISqliteConnectionFactory connectionFactory;
-
-    public ThrottleRepository(ISqliteConnectionFactory connectionFactory)
-    {
-        this.connectionFactory = connectionFactory;
-    }
-
     public async Task<ThrottleEvaluationResult> IncrementAndEvaluateAsync(
+        IDbConnection connection,
+        IDbTransaction transaction,
         string supplierId,
         long currentBucketId,
         long previousBucketId,
@@ -36,9 +31,6 @@ public sealed class ThrottleRepository : IThrottleRepository
         double throttleThreshold,
         CancellationToken cancellationToken = default)
     {
-        using var connection = connectionFactory.CreateOpenConnection();
-        using var transaction = connection.BeginTransaction();
-
         var currentBucketCount = await IncrementBucketAsync(connection, transaction, supplierId, currentBucketId, cancellationToken);
         var previousBucketCount = await ReadBucketCountAsync(connection, transaction, supplierId, previousBucketId, cancellationToken);
         var estimatedCount = currentBucketCount + (previousBucketCount * overlapWeight);
@@ -50,8 +42,6 @@ public sealed class ThrottleRepository : IThrottleRepository
         }
 
         await PruneOldBucketsAsync(connection, transaction, supplierId, previousBucketId, cancellationToken);
-
-        transaction.Commit();
 
         return new ThrottleEvaluationResult(currentBucketCount, previousBucketCount, estimatedCount, isThrottled);
     }

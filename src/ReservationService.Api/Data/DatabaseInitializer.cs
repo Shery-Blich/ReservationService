@@ -8,10 +8,10 @@ public sealed class DatabaseInitializer : IDatabaseInitializer
             SupplierId TEXT NOT NULL,
             ReservationId TEXT NOT NULL,
             RoomId TEXT NOT NULL,
-            CheckIn TEXT NOT NULL,
-            CheckOut TEXT NOT NULL,
+            CheckIn INTEGER NOT NULL,
+            CheckOut INTEGER NOT NULL,
             Price TEXT NOT NULL,
-            UpdatedAtUtc TEXT NOT NULL,
+            UpdatedAtUtc INTEGER NOT NULL,
             PRIMARY KEY (SupplierId, ReservationId)
         );
 
@@ -27,8 +27,7 @@ public sealed class DatabaseInitializer : IDatabaseInitializer
         (
             SupplierId TEXT NOT NULL PRIMARY KEY,
             IngestedCount INTEGER NOT NULL DEFAULT 0,
-            ThrottledCount INTEGER NOT NULL DEFAULT 0,
-            InvalidCount INTEGER NOT NULL DEFAULT 0
+            ThrottledCount INTEGER NOT NULL DEFAULT 0
         );
         """;
 
